@@ -58,7 +58,7 @@ describe('getAll', () => {
       { elements: [{ id: 1 }, { id: 2 }], paging: {} },
       { elements: [{ id: 3 }], paging: {} },
     ]
-    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+    const fetchMock = vi.fn().mockImplementation(async () => {
       const page = pages.shift()
       return {
         ok: true,
