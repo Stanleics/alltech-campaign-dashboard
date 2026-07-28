@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model DimCampaign {
+  id              String    @id
+  adAccountId     String    @map("ad_account_id")
+  campaignGroupId String?   @map("campaign_group_id")
+  name            String
+  objectiveType   String?   @map("objective_type")
+  format          String?
+  status          String?
+  budgetAmount    Decimal?  @map("budget_amount") @db.Decimal(12, 2)
+  currency        String?
+  startDate       DateTime? @map("start_date") @db.Date
+  endDate         DateTime? @map("end_date") @db.Date
+
+  creatives     DimCreative[]
+  paidAnalytics FactPaidAnalytics[]
+  boostedPosts  FactOrganicPost[]   @relation("BoostedCampaign")
+
+  @@map("dim_campaigns")
+}
+
+model DimCreative {
+  id         String      @id
+  campaignId String      @map("campaign_id")
+  campaign   DimCampaign @relation(fields: [campaignId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  format     String?
+  headline   String?
+  pillar     String?
+  status     String?
+  startDate  DateTime?   @map("start_date") @db.Date
+
+  paidAnalytics FactPaidAnalytics[]
+
+  @@map("dim_creatives")
+}
+
+model FactPaidAnalytics {
+  id          BigInt      @id @default(autoincrement())
+  creativeId  String      @map("creative_id")
+  creative    DimCreative @relation(fields: [creativeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  campaignId  String      @map("campaign_id")
+  campaign    DimCampaign @relation(fields: [campaignId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  dateStart   DateTime    @map("date_start") @db.Date
+  dateEnd     DateTime    @map("date_end") @db.Date
+  impressions BigInt?     @default(0)
+  clicks      BigInt?     @default(0)
+  reach       BigInt?     @default(0)
+  likes       BigInt?     @default(0)
+  comments    BigInt?     @default(0)
+  shares      BigInt?     @default(0)
+  follows     BigInt?     @default(0)
+  cost        Decimal?    @default(0) @db.Decimal(12, 2)
+
+  @@unique([creativeId, dateStart, dateEnd])
+  @@map("fact_paid_analytics")
+}
+
+model FactOrganicPost {
+  id                  String       @id
+  publishedAt         DateTime     @map("published_at") @db.Date
+  type                String?
+  headline            String?
+  impressions         BigInt?      @default(0)
+  clicks              BigInt?      @default(0)
+  likes               BigInt?      @default(0)
+  comments            BigInt?      @default(0)
+  shares              BigInt?      @default(0)
+  engagementRate      Decimal?     @default(0) @map("engagement_rate") @db.Decimal(6, 4)
+  wasBoosted          Boolean?     @default(false) @map("was_boosted")
+  boostedByCampaignId String?      @map("boosted_by_campaign_id")
+  boostedByCampaign   DimCampaign? @relation("BoostedCampaign", fields: [boostedByCampaignId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("fact_organic_posts")
+}
+
+model FactFollowerStats {
+  dateStart           DateTime @map("date_start") @db.Date
+  dateEnd              DateTime @map("date_end") @db.Date
+  organicFollowerGain BigInt?  @default(0) @map("organic_follower_gain")
+  paidFollowerGain    BigInt?  @default(0) @map("paid_follower_gain")
+  totalFollowers      BigInt?  @default(0) @map("total_followers")
+
+  @@id([dateStart, dateEnd])
+  @@map("fact_follower_stats")
+}
