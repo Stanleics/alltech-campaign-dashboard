@@ -27,9 +27,11 @@ export interface CreativeInfo {
 }
 
 export interface PaidPerformanceRow {
+  campaignId: string
   campaignName: string
   objectiveType: string | null
   campaignStatus: string | null
+  creativeId: string
   creativeHeadline: string | null
   pillar: string | null
   dateStart: string
@@ -63,9 +65,11 @@ export function computePaidPerformanceRows(
       const engagements = a.likes + a.comments + a.shares
 
       return {
+        campaignId: a.campaignId,
         campaignName: campaign.name,
         objectiveType: campaign.objectiveType,
         campaignStatus: campaign.status,
+        creativeId: a.creativeId,
         creativeHeadline: creative.headline,
         pillar: creative.pillar,
         dateStart: a.dateStart,
@@ -85,6 +89,92 @@ export function computePaidPerformanceRows(
       }
     })
     .filter((row): row is PaidPerformanceRow => row !== null)
+}
+
+export interface CreativePerformanceRow {
+  campaignId: string
+  campaignName: string
+  objectiveType: string | null
+  campaignStatus: string | null
+  creativeId: string
+  creativeHeadline: string | null
+  impressions: number
+  reach: number
+  frequency: number | null
+  clicks: number
+  ctr: number | null
+  engagements: number
+  engagementRate: number | null
+  follows: number
+  cost: number
+  cpc: number | null
+  cpm: number | null
+  costPerEngagement: number | null
+}
+
+/** Rolls the per-creative-per-day rows up to one row per creative, covering the whole period they were fetched for. */
+export function aggregateByCreative(rows: PaidPerformanceRow[]): CreativePerformanceRow[] {
+  interface Totals {
+    campaignId: string
+    campaignName: string
+    objectiveType: string | null
+    campaignStatus: string | null
+    creativeHeadline: string | null
+    impressions: number
+    reach: number
+    clicks: number
+    engagements: number
+    follows: number
+    cost: number
+  }
+
+  const totals = new Map<string, Totals>()
+
+  for (const r of rows) {
+    const t = totals.get(r.creativeId) ?? {
+      campaignId: r.campaignId,
+      campaignName: r.campaignName,
+      objectiveType: r.objectiveType,
+      campaignStatus: r.campaignStatus,
+      creativeHeadline: r.creativeHeadline,
+      impressions: 0,
+      reach: 0,
+      clicks: 0,
+      engagements: 0,
+      follows: 0,
+      cost: 0,
+    }
+    t.impressions += r.impressions
+    t.reach += r.reach
+    t.clicks += r.clicks
+    t.engagements += r.engagements
+    t.follows += r.follows
+    t.cost += r.cost
+    totals.set(r.creativeId, t)
+  }
+
+  return Array.from(totals.entries())
+    .map(([creativeId, t]) => ({
+      campaignId: t.campaignId,
+      campaignName: t.campaignName,
+      objectiveType: t.objectiveType,
+      campaignStatus: t.campaignStatus,
+      creativeId,
+      creativeHeadline: t.creativeHeadline,
+      impressions: t.impressions,
+      reach: t.reach,
+      frequency: t.reach > 0 ? t.impressions / t.reach : null,
+      clicks: t.clicks,
+      ctr: t.impressions > 0 ? t.clicks / t.impressions : null,
+      engagements: t.engagements,
+      engagementRate: t.impressions > 0 ? t.engagements / t.impressions : null,
+      follows: t.follows,
+      cost: t.cost,
+      cpc: t.clicks > 0 ? t.cost / t.clicks : null,
+      cpm: t.impressions > 0 ? (t.cost / t.impressions) * 1000 : null,
+      costPerEngagement: t.engagements > 0 ? t.cost / t.engagements : null,
+    }))
+    .sort((a, b) => a.campaignName.localeCompare(b.campaignName) || b.cost - a.cost)
 }
 
 function toIsoDate(d: Date): string {

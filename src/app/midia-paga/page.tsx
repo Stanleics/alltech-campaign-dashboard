@@ -1,8 +1,8 @@
-import { getPaidPerformance } from '@/lib/metrics/compute-paid-performance'
+import { aggregateByCreative, getPaidPerformance } from '@/lib/metrics/compute-paid-performance'
 import { resolveDateRange, toDateBounds } from '@/lib/date-range'
 import { PeriodPicker } from '@/components/ui/PeriodPicker'
 import { StatCard } from '@/components/ui/StatCard'
-import { PaidPerformanceTable } from '@/components/paid/PaidPerformanceTable'
+import { CreativePerformanceTable } from '@/components/paid/CreativePerformanceTable'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +19,8 @@ export default async function PaidMediaPage({
   const { startDate, endDate } = toDateBounds({ since, until })
 
   const rows = await getPaidPerformance(startDate, endDate)
-  const totalCost = rows.reduce((sum, r) => sum + r.cost, 0)
+  const creativeRows = aggregateByCreative(rows)
+  const totalCost = creativeRows.reduce((sum, r) => sum + r.cost, 0)
 
   return (
     <main className="min-h-screen">
@@ -31,7 +32,7 @@ export default async function PaidMediaPage({
         <div className="mb-6 max-w-xs">
           <StatCard label="Valor investido no período" value={formatCurrency(totalCost)} />
         </div>
-        <PaidPerformanceTable rows={rows} />
+        <CreativePerformanceTable rows={creativeRows} />
       </div>
     </main>
   )
