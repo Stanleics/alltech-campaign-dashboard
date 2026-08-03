@@ -1,6 +1,7 @@
 import { chunked, getAll, msToDateStr, urnList } from './api'
 
-const POST_COUNT = 50 // most recent posts; TODO: paginate full history
+const POST_PAGE_SIZE = 50
+const POST_MAX_PAGES = 20 // paginates up to 1,000 posts of history
 const STATS_CHUNK_SIZE = 20
 const FOLLOWER_LOOKBACK_DAYS = 90
 
@@ -212,8 +213,8 @@ export async function fetchLinkedInOrganic(): Promise<FetchLinkedInOrganicResult
   const rawPosts = (await getAll(
     '/posts',
     `q=author&author=${orgUrnEnc}`,
-    POST_COUNT,
-    1,
+    POST_PAGE_SIZE,
+    POST_MAX_PAGES,
   )) as unknown as RawPost[]
   const statsById = await fetchShareStats(rawPosts, orgUrnEnc)
   const posts = rawPosts.map((p) => transformPost(p, statsById))

@@ -1,6 +1,6 @@
 import { chunked, dateRangeFragment, getAll, msToDateStr, urnList } from './api'
 
-const LOOKBACK_DAYS = 90
+const LOOKBACK_DAYS = 365
 
 export interface CampaignRow {
   id: string
@@ -207,7 +207,10 @@ export async function fetchLinkedInPaid(): Promise<FetchLinkedInPaidResult> {
     `&accounts=${urnList([adAccountUrn])}` +
     `&fields=${fields}`
 
-  const rawAnalytics = await getAll('/adAnalytics', analyticsQuery)
+  // page/max bumped from the getAll defaults (50/20 -> 1,000 rows) because a
+  // 365-day daily-granularity window across multiple creatives can exceed
+  // that cap; 100/50 covers ~5,000 rows before silently truncating older data.
+  const rawAnalytics = await getAll('/adAnalytics', analyticsQuery, 100, 50)
   const analyticsRows = rawAnalytics
     .map((r) => transformAnalyticsRow(r as unknown as RawAnalyticsRow, creativeToCampaign))
     .filter((row): row is PaidAnalyticsRow => row !== null)

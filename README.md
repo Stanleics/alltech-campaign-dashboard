@@ -2,8 +2,10 @@
 
 Dashboard de acompanhamento de metas de **autoridade** no LinkedIn (mídia paga
 + orgânico). Reescrita em Next.js do dashboard original em Streamlit/Python
-(`github.com/Stanleics/alltech-linkedin-dashboard`), mantendo o mesmo Supabase
-já populado com dados reais.
+(histórico preservado em `github.com/Stanleics/alltech-linkedin-dashboard`,
+repositório descontinuado — ver "Atualização de dados" abaixo), mantendo o
+mesmo Supabase já populado com dados reais. Este é o único dashboard ativo do
+projeto, publicado em `alltech-dashboard.vercel.app`.
 
 > Todas as metas medem presença e autoridade. A conversão comercial é
 > consequência natural — não o gatilho que mede o sucesso desta estratégia.
@@ -39,9 +41,9 @@ desde o Mês 1, com teto no valor de Mês 6 (`src/lib/goals/pacing.ts`).
 ## Rodando localmente
 
 1. `npm install`
-2. `cp .env.example .env` e preencha com o mesmo `DATABASE_URL` (Supabase) e
-   credenciais LinkedIn já usadas pelo dashboard Python — `DIRECT_URL` pode
-   ficar em branco (o pooler já é session-mode).
+2. `cp .env.example .env` e preencha com `DATABASE_URL` (Supabase) e as
+   credenciais LinkedIn — `DIRECT_URL` pode ficar em branco (o pooler já é
+   session-mode).
 3. `npm run dev` e abra `http://localhost:3000`
 
 Não é preciso rodar `prisma migrate dev` nem seed — o banco já existe e já
@@ -56,20 +58,27 @@ pacing/metas (`src/lib/goals`), tudo sem rede nem banco.
 
 ## Credenciais LinkedIn
 
-Mesmo app aprovado no LinkedIn Marketing Developer Platform usado pelo
-dashboard Python ("Alltech", não "Community Management"). Gerar/renovar o
-token com `scripts/get_linkedin_token.py` do repo Python quando expirar
-(~60 dias) e atualizar `LINKEDIN_ACCESS_TOKEN` aqui e lá.
+App aprovado no LinkedIn Marketing Developer Platform ("Alltech", não
+"Community Management"). O script para gerar/renovar o token
+(`scripts/get_linkedin_token.py`, ~60 dias de validade) está preservado no
+histórico do repo Python descontinuado
+(`github.com/Stanleics/alltech-linkedin-dashboard`); rodar dali e colar o
+`LINKEDIN_ACCESS_TOKEN` gerado aqui.
 
 ## Atualização de dados
 
 - Botão "Atualizar dados" na Visão geral dispara o ETL sob demanda (Server
   Action `src/app/actions/refresh-etl.ts`).
 - `GET /api/etl/run` (protegido por `Authorization: Bearer $CRON_SECRET`) é o
-  endpoint que o Vercel Cron chama diariamente — ver `vercel.json`.
-- Enquanto este app não estiver validado em produção, o GitHub Action Python
-  (`alltech-linkedin-dashboard/.github/workflows/etl.yml`) continua sendo o
-  único escritor agendado no banco.
+  **único** escritor agendado no banco — o Vercel Cron chama esse endpoint
+  diariamente (ver `vercel.json`).
+- O repo Python (`alltech-linkedin-dashboard`) tinha uma GitHub Action
+  equivalente, mas ela ficou anos sem a repository variable `DATA_SOURCE`
+  configurada e por isso rodava em `DATA_SOURCE=mock` todo dia, escrevendo
+  campanhas/posts fictícios (prefixo `MOCK`) neste mesmo Supabase — descoberto
+  e corrigido em 2026-08-03 (dados MOCK removidos, Action desligada
+  permanentemente via `gh workflow disable`). Esse repositório está
+  descontinuado; não reativar a Action.
 
 ## Deploy (Vercel)
 
@@ -78,9 +87,6 @@ token com `scripts/get_linkedin_token.py` do repo Python quando expirar
 2. Em Vercel → Settings → Environment Variables, configure: `DATABASE_URL`,
    `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_ACCESS_TOKEN`,
    `LINKEDIN_API_VERSION`, `LINKEDIN_ORGANIZATION_URN`,
-   `LINKEDIN_AD_ACCOUNT_URN` (mesmos valores do `.env` do repo Python).
+   `LINKEDIN_AD_ACCOUNT_URN` (mesmos valores do `.env`).
 3. Habilite Vercel Cron Jobs — a Vercel injeta `CRON_SECRET` automaticamente.
 4. Deploy.
-5. Só depois de validar visualmente os números contra o dashboard Python e o
-   cliente aprovar: desligar o GitHub Action do repo Python para evitar dois
-   escritores agendados no mesmo banco.
