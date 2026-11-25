@@ -4,7 +4,6 @@ import { monthsElapsed, pacedTarget } from './pacing'
 
 export interface PaidAnalyticsGoalInput {
   impressions: number
-  reach: number
   clicks: number
   likes: number
   comments: number
@@ -36,13 +35,18 @@ export function computeGoals(
   paidAnalyticsRows: PaidAnalyticsGoalInput[],
   followerStatsRows: FollowerStatsGoalInput[],
   today: Date,
+  /**
+   * Deduplicated reach of the window, as computed by LinkedIn. Not derivable
+   * from the daily rows: summing daily reach counts a person once per day.
+   */
+  uniqueReach = 0,
 ): GoalResult[] {
   const validStartDates = campaignStartDates.filter((d): d is Date => d !== null)
   const month1Start = validStartDates.length > 0 ? new Date(Math.min(...validStartDates.map((d) => d.getTime()))) : null
   const elapsed = month1Start ? monthsElapsed(month1Start, today) : 0
 
   const totalImpressions = sum(paidAnalyticsRows, (r) => r.impressions)
-  const totalReach = sum(paidAnalyticsRows, (r) => r.reach)
+  const totalReach = uniqueReach
   const totalClicks = sum(paidAnalyticsRows, (r) => r.clicks)
   const totalEngagements = sum(paidAnalyticsRows, (r) => r.likes + r.comments + r.shares)
   // Only paid_follower_gain — the KPI is "seguidores ganhos via anúncios", not
@@ -77,15 +81,19 @@ export function computeGoals(
 }
 
 export async function getGoals(startDate: Date, endDate: Date, today: Date = new Date()): Promise<GoalResult[]> {
-  const [campaigns, analyticsRows, followerRows] = await Promise.all([
+  const [campaigns, analyticsRows, followerRows, reachPeriod] = await Promise.all([
     prisma.dimCampaign.findMany({ select: { startDate: true } }),
     prisma.factPaidAnalytics.findMany({ where: { dateStart: { gte: startDate }, dateEnd: { lte: endDate } } }),
     prisma.factFollowerStats.findMany({ where: { dateStart: { gte: startDate }, dateEnd: { lte: endDate } } }),
+    // Latest ETL snapshot of the account's unique reach whose window ends inside ours.
+    prisma.factPaidReachPeriod.findFirst({
+      where: { dateEnd: { gte: startDate, lte: endDate } },
+      orderBy: { dateEnd: 'desc' },
+    }),
   ])
 
   const paidAnalyticsInputs: PaidAnalyticsGoalInput[] = analyticsRows.map((a) => ({
     impressions: Number(a.impressions ?? 0),
-    reach: Number(a.reach ?? 0),
     clicks: Number(a.clicks ?? 0),
     likes: Number(a.likes ?? 0),
     comments: Number(a.comments ?? 0),
@@ -101,5 +109,6 @@ export async function getGoals(startDate: Date, endDate: Date, today: Date = new
     paidAnalyticsInputs,
     followerInputs,
     today,
+    Number(reachPeriod?.reach ?? 0),
   )
 }

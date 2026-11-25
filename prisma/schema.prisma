@@ -90,3 +90,19 @@ model FactFollowerStats {
   @@id([dateStart, dateEnd])
   @@map("fact_follower_stats")
 }
+
+/// Unique reach (deduplicated people) of the whole ad account over a window.
+/// Daily reach rows can't be summed into a period reach (the same person is
+/// counted on every day they saw an ad), so the ETL stores the account-level
+/// number LinkedIn computes for the window directly. Currently the trailing
+/// 30 days, which is what the overview KPI cards use.
+model FactPaidReachPeriod {
+  id        BigInt   @id @default(autoincrement())
+  dateStart DateTime @map("date_start") @db.Date
+  dateEnd   DateTime @map("date_end") @db.Date
+  reach     BigInt   @default(0)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([dateStart, dateEnd])
+  @@map("fact_paid_reach_period")
+}

@@ -6,6 +6,7 @@ import {
   upsertFollowerStatsRows,
   upsertOrganicPostRows,
   upsertPaidAnalyticsRows,
+  upsertPaidReachPeriodRows,
 } from './upsert'
 
 export interface PaidEtlResult {
@@ -33,6 +34,7 @@ export async function runPaidEtl(): Promise<PaidEtlResult> {
   await upsertCampaignRows(paid.campaigns)
   await upsertCreativeRows(paid.creatives)
   await upsertPaidAnalyticsRows(paid.analyticsRows)
+  await upsertPaidReachPeriodRows(paid.reachPeriods)
 
   return {
     campaigns: paid.campaigns.length,

@@ -23,7 +23,7 @@ describe('computeGoals', () => {
   it('computes month1Start as the earliest campaign start date, ignoring nulls', () => {
     const results = computeGoals(
       [null, new Date('2026-07-10T00:00:00Z'), new Date('2026-07-01T00:00:00Z')],
-      [{ impressions: 3000, reach: 1000, clicks: 6, likes: 0, comments: 0, shares: 0 }],
+      [{ impressions: 3000, clicks: 6, likes: 0, comments: 0, shares: 0 }],
       [],
       new Date('2026-08-01T00:00:00Z'), // 31 days after 2026-07-01 ~= 1.03 months
     )
@@ -47,10 +47,12 @@ describe('computeGoals', () => {
   it('computes frequency, engagementRate and ctr as derived rates with 0-denominator guards', () => {
     const withData = computeGoals(
       [new Date('2026-07-01T00:00:00Z')],
-      [{ impressions: 1000, reach: 250, clicks: 4, likes: 5, comments: 2, shares: 1 }],
+      [{ impressions: 1000, clicks: 4, likes: 5, comments: 2, shares: 1 }],
       [],
       new Date('2026-07-01T00:00:00Z'),
+      250, // unique reach for the window
     )
+    expect(withData.find((r) => r.key === 'paidReach')!.currentValue).toBe(250)
     expect(withData.find((r) => r.key === 'frequency')!.currentValue).toBe(4) // 1000/250
     expect(withData.find((r) => r.key === 'engagementRate')!.currentValue).toBe(0.008) // 8/1000
     expect(withData.find((r) => r.key === 'ctr')!.currentValue).toBe(0.004) // 4/1000
@@ -71,5 +73,23 @@ describe('computeGoals', () => {
       'paidFollowerGain',
       'ctr',
     ])
+  })
+
+  it('uses the unique reach passed in, never a sum of daily reach (people counted once per day)', () => {
+    // Same 100 people seeing the ad on 3 consecutive days: daily reach would
+    // sum to 300, but the unique reach LinkedIn reports for the window is 100.
+    const results = computeGoals(
+      [new Date('2026-07-01T00:00:00Z')],
+      [
+        { impressions: 100, clicks: 0, likes: 0, comments: 0, shares: 0 },
+        { impressions: 100, clicks: 0, likes: 0, comments: 0, shares: 0 },
+        { impressions: 100, clicks: 0, likes: 0, comments: 0, shares: 0 },
+      ],
+      [],
+      new Date('2026-07-04T00:00:00Z'),
+      100,
+    )
+    expect(results.find((r) => r.key === 'paidReach')!.currentValue).toBe(100)
+    expect(results.find((r) => r.key === 'frequency')!.currentValue).toBe(3) // 300/100
   })
 })

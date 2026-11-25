@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import type { CampaignRow, CreativeRow, PaidAnalyticsRow } from '@/lib/linkedin/paid'
+import type { CampaignRow, CreativeRow, PaidAnalyticsRow, PaidReachPeriodRow } from '@/lib/linkedin/paid'
 import type { FollowerStatsRow, OrganicPostRow } from '@/lib/linkedin/organic'
 
 export async function upsertCampaignRows(rows: CampaignRow[]): Promise<void> {
@@ -88,7 +88,9 @@ export async function upsertPaidAnalyticsRows(rows: PaidAnalyticsRow[]): Promise
         campaignId: row.campaignId,
         impressions: row.impressions,
         clicks: row.clicks,
-        reach: row.reach,
+        // Daily reach only exists for the last ~90 days; once a day rolls out of
+        // that window the fetch returns 0 for it, which must not wipe the stored value.
+        ...(row.reach > 0 ? { reach: row.reach } : {}),
         likes: row.likes,
         comments: row.comments,
         shares: row.shares,
@@ -155,6 +157,18 @@ export async function upsertFollowerStatsRows(rows: FollowerStatsRow[]): Promise
         paidFollowerGain: row.paidFollowerGain,
         totalFollowers: row.totalFollowers,
       },
+    })
+  }
+}
+
+export async function upsertPaidReachPeriodRows(rows: PaidReachPeriodRow[]): Promise<void> {
+  for (const row of rows) {
+    await prisma.factPaidReachPeriod.upsert({
+      where: {
+        dateStart_dateEnd: { dateStart: new Date(row.dateStart), dateEnd: new Date(row.dateEnd) },
+      },
+      create: { dateStart: new Date(row.dateStart), dateEnd: new Date(row.dateEnd), reach: row.reach },
+      update: { reach: row.reach, updatedAt: new Date() },
     })
   }
 }

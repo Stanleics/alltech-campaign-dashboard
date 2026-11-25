@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { transformAnalyticsRow, transformCampaign, transformCreative } from './paid'
+import {
+  mergeCreativeReach,
+  transformAnalyticsRow,
+  transformCampaign,
+  transformCreative,
+  transformReachPeriodRow,
+  type PaidAnalyticsRow,
+} from './paid'
 
 describe('transformCampaign', () => {
   it('maps a raw adCampaigns element into a CampaignRow', () => {
@@ -132,5 +139,50 @@ describe('transformAnalyticsRow', () => {
       creativeToCampaign,
     )
     expect(row).toMatchObject({ impressions: 0, clicks: 0, reach: 0, cost: 0 })
+  })
+})
+
+describe('mergeCreativeReach', () => {
+  const base = (over: Partial<PaidAnalyticsRow>): PaidAnalyticsRow => ({
+    creativeId: 'c1',
+    campaignId: 'k1',
+    dateStart: '2026-11-01',
+    dateEnd: '2026-11-01',
+    impressions: 10,
+    clicks: 0,
+    reach: 0,
+    likes: 0,
+    comments: 0,
+    shares: 0,
+    follows: 0,
+    cost: 0,
+    ...over,
+  })
+
+  it('copies reach onto matching creative+date rows and leaves older rows at 0', () => {
+    const merged = mergeCreativeReach(
+      [base({}), base({ dateStart: '2026-05-01', dateEnd: '2026-05-01' }), base({ creativeId: 'c2' })],
+      [base({ reach: 7 })],
+    )
+    expect(merged.map((r) => r.reach)).toEqual([7, 0, 0])
+  })
+})
+
+describe('transformReachPeriodRow', () => {
+  it('maps an ACCOUNT/ALL element to a period row', () => {
+    expect(
+      transformReachPeriodRow({
+        approximateMemberReach: 4460,
+        dateRange: { start: { year: 2026, month: 10, day: 26 }, end: { year: 2026, month: 11, day: 25 } },
+      }),
+    ).toEqual({ dateStart: '2026-10-26', dateEnd: '2026-11-25', reach: 4460 })
+  })
+
+  it('returns null when LinkedIn omitted the reach field', () => {
+    expect(
+      transformReachPeriodRow({
+        dateRange: { start: { year: 2026, month: 10, day: 26 }, end: { year: 2026, month: 11, day: 25 } },
+      }),
+    ).toBeNull()
   })
 })
