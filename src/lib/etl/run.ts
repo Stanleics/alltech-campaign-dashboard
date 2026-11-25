@@ -8,12 +8,25 @@ import {
   upsertPaidAnalyticsRows,
 } from './upsert'
 
-export interface EtlRunResult {
-  paid: { campaigns: number; creatives: number; analyticsRows: number; usedFallback: boolean }
-  organic: { posts: number; followerStatsRows: number; usedFallback: boolean }
+export interface PaidEtlResult {
+  campaigns: number
+  creatives: number
+  analyticsRows: number
+  usedFallback: boolean
 }
 
-export async function runEtl(): Promise<EtlRunResult> {
+export interface OrganicEtlResult {
+  posts: number
+  followerStatsRows: number
+  usedFallback: boolean
+}
+
+export interface EtlRunResult {
+  paid: PaidEtlResult
+  organic: OrganicEtlResult
+}
+
+export async function runPaidEtl(): Promise<PaidEtlResult> {
   const paid = await fetchLinkedInPaid()
   // Campaigns before creatives before analytics — each table has a foreign
   // key into the one before it, so insert order must respect that.
@@ -21,21 +34,29 @@ export async function runEtl(): Promise<EtlRunResult> {
   await upsertCreativeRows(paid.creatives)
   await upsertPaidAnalyticsRows(paid.analyticsRows)
 
+  return {
+    campaigns: paid.campaigns.length,
+    creatives: paid.creatives.length,
+    analyticsRows: paid.analyticsRows.length,
+    usedFallback: paid.usedFallback,
+  }
+}
+
+export async function runOrganicEtl(): Promise<OrganicEtlResult> {
   const organic = await fetchLinkedInOrganic()
   await upsertOrganicPostRows(organic.posts)
   await upsertFollowerStatsRows(organic.followerStats)
 
   return {
-    paid: {
-      campaigns: paid.campaigns.length,
-      creatives: paid.creatives.length,
-      analyticsRows: paid.analyticsRows.length,
-      usedFallback: paid.usedFallback,
-    },
-    organic: {
-      posts: organic.posts.length,
-      followerStatsRows: organic.followerStats.length,
-      usedFallback: organic.usedFallback,
-    },
+    posts: organic.posts.length,
+    followerStatsRows: organic.followerStats.length,
+    usedFallback: organic.usedFallback,
   }
+}
+
+/** Both halves in sequence — used by the on-demand "Atualizar dados" button. */
+export async function runEtl(): Promise<EtlRunResult> {
+  const paid = await runPaidEtl()
+  const organic = await runOrganicEtl()
+  return { paid, organic }
 }

@@ -69,9 +69,13 @@ histórico do repo Python descontinuado
 
 - Botão "Atualizar dados" na Visão geral dispara o ETL sob demanda (Server
   Action `src/app/actions/refresh-etl.ts`).
-- `GET /api/etl/run` (protegido por `Authorization: Bearer $CRON_SECRET`) é o
-  **único** escritor agendado no banco — o Vercel Cron chama esse endpoint
-  diariamente (ver `vercel.json`).
+- Dois endpoints agendados (protegidos por `Authorization: Bearer $CRON_SECRET`),
+  os **únicos** escritores agendados no banco, chamados pelo Vercel Cron
+  diariamente (ver `vercel.json`): `GET /api/etl/run` (mídia paga, 06:00 UTC) e
+  `GET /api/etl/organic` (posts orgânicos + seguidores, 06:30 UTC). Ficam
+  separados para que uma falha ou estouro de tempo de um lado não impeça o
+  outro de gravar (o orgânico parou de atualizar em out/2026 por esse motivo,
+  hipótese não confirmada nos logs). O botão "Atualizar dados" roda os dois.
 - O repo Python (`alltech-linkedin-dashboard`) tinha uma GitHub Action
   equivalente, mas ela ficou anos sem a repository variable `DATA_SOURCE`
   configurada e por isso rodava em `DATA_SOURCE=mock` todo dia, escrevendo
