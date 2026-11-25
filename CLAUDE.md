@@ -34,16 +34,17 @@ Setup, páginas e deploy: `README.md`. Não commitar `.env`.
 ## Estado atual (2026-11-25)
 
 - Em produção/banco: crons separados, alcance e frequência corrigidos, ETL local rodado e
-  banco preenchido até 23/11 (seguidores) e 25/11 (alcance). Commits `9ef44c1` e `07c1d40`.
+  banco preenchido até 23/11 (seguidores) e 25/11 (alcance). Commits `9ef44c1`, `07c1d40` e
+  `c82c99b` (docs), com deploy em sucesso. Usuário confirmou os cards corretos em produção.
 - Cards (30 dias): impressões 5.354, alcance 4.460, frequência 1,20, engajamento 0,34%,
   seguidores 57, CTR 2,93%.
 
 ## Pendências
 
-- Confirmar nos logs da Vercel que `/api/etl/organic` e `/api/etl/run` terminam sem estourar
-  tempo (`maxDuration = 300` pode ser limitado pelo plano; o plano é desconhecido). A causa do
-  orgânico ter parado em 19/10 é hipótese, não confirmada.
-- Conferir os cards no dashboard em produção após o deploy (não aberto nesta sessão).
+- Conferir nos logs da Vercel, a partir do primeiro cron separado (2026-11-26, 06:00 e 06:30
+  UTC), se `/api/etl/run` e `/api/etl/organic` terminam em 200 sem estourar tempo. Não dá para
+  ver daqui: sem Vercel CLI nem `CRON_SECRET`. Plano da Vercel desconhecido (`maxDuration = 300`
+  pode ser limitado). A causa do orgânico ter parado em 19/10 é hipótese, não confirmada.
 - Se o ETL pago estourar tempo: gravar em lote em vez de upsert linha a linha.
 - Alcance por criativo/período na Mídia paga (hoje soma diário).
 

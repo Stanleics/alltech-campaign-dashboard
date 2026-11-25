@@ -36,3 +36,8 @@ seguidores; depois, o mesmo para "Alcance único de gestores" e "Frequência mé
   a repetição funcionou.
 - Não verificado: dashboard em produção após o deploy; comportamento do cron na Vercel.
 - Limitação conhecida: a coluna "Alcance" da Mídia paga continua somando alcance diário.
+- Fechamento: o usuário confirmou os cards corretos em produção. Os 3 deploys (`9ef44c1`,
+  `07c1d40`, `c82c99b`) terminaram em sucesso e `/api/etl/run` e `/api/etl/organic` respondem
+  401 sem segredo (rotas existem). Logs dos crons não verificados (sem Vercel CLI nem
+  `CRON_SECRET`; chamar a rota em produção grava no banco). Primeira execução separada dos
+  crons: 2026-11-26 às 06:00/06:30 UTC.
